@@ -7,6 +7,10 @@ import os
 import numpy as np
 import cv2
 
+from pathlib import Path
+
+import math
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
@@ -16,6 +20,8 @@ class PhotoApp:
         self.photos = []
         self.points = []
         self.current_photo_index = 0
+        self.folder_path = str(Path.home())
+
         self.rotate = (
             tk.BooleanVar()
         )  # Add a variable to hold the state of the checkbox
@@ -70,6 +76,7 @@ class PhotoApp:
 
     def upload_folder(self):
         folderpath = filedialog.askdirectory()
+        self.folder_path = folderpath
         filepaths = [
             os.path.join(folderpath, f)
             for f in os.listdir(folderpath)
@@ -210,7 +217,7 @@ class PhotoApp:
             else:
                 self.points.append(self.point)
             print(f"Number of poitns", len(self.points))
-            if 3 == len(self.points):
+            if len(self.points) >= 3:
                 self.generate_button.config(state=tk.NORMAL)
 
     def next_photo(self, event=None):
@@ -290,7 +297,7 @@ class PhotoApp:
         ]
         gif_images += gif_images[-2:0:-1]
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        gif_path = f"/Users/hudzah/Documents/Generated/generated_{timestamp}.gif"
+        gif_path = self.folder_path + f"/generated_{timestamp}.gif"
         gif_images[0].save(
             gif_path,
             save_all=True,
