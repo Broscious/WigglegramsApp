@@ -242,17 +242,24 @@ class PhotoApp:
             print("Not enough points to align.")
             return
 
-        ref_point = np.array(self.points[0], dtype="float32")
-
         transformed_images = []
+        
+        # Align the images on the selected points while also constraining all images to overlapping area after they are aligned by translating the top left of the fully overlapping rectangle to 0,0
+        min_left = min(point[0] for point in self.points)
+        min_up = min(point[1] for point in self.points)
+        ref_point = np.array((min_left, min_up), dtype="float32")
 
         for i, (path, date) in enumerate(self.photos):
             img = cv2.imread(path)
+            original_height, original_width = img.shape[:2]
+
             selected_point = np.array(self.points[i], dtype="float32")
 
             dx, dy = ref_point - selected_point
+            dx = round(dx)
+            dy = round(dy)
             M = np.float32([[1, 0, dx], [0, 1, dy]])
-
+            print("i", i, "dx", dx, "dy", dy, "original_height", original_height, "original_width", original_width)
             transformed_img = cv2.warpAffine(
                 img,
                 M,
@@ -260,6 +267,13 @@ class PhotoApp:
                 flags=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_CONSTANT,
             )
+
+            # constrain back to the new area
+            valid_x_start = max(0, dx)
+            valid_y_start = max(0, dy) 
+            valid_x_end = min(original_width, original_width + dx)
+            valid_y_end = min(original_height, original_height + dy)
+            transformed_img = transformed_img[valid_y_start:valid_y_end, valid_x_start:valid_x_end]
 
             if self.rotate.get():  # Check if the rotate checkbox is checked
                 transformed_img = cv2.rotate(
