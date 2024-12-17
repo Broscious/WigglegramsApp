@@ -21,6 +21,7 @@ class PhotoApp:
         self.points = []
         self.current_photo_index = 0
         self.folder_path = str(Path.home())
+        self.ratio = 16/9
 
         self.rotate = (
             tk.BooleanVar()
@@ -289,6 +290,50 @@ class PhotoApp:
 
             transformed_images.append(transformed_img)
 
+        min_height = min(image.shape[0] for image in transformed_images)
+        min_width = min(image.shape[1] for image in transformed_images)
+        print("min height", min_height, "min_width", min_width)
+
+        # constrain to largest area which can hit the desired aspect ratio
+        # if height/width greater than ratio, truncate height else truncate width
+        if min_height/min_width > self.ratio:
+            print("cropping height")
+            left, right = 0, min_width
+            # calculate the new height by applying the ratio on the unchanging dimension
+            output_height = math.ceil(min_width * self.ratio)
+            half_height = output_height//2
+
+            # get the top and bottom even if one is out of bounds
+            top = round(ref_point[1]) - half_height
+            bottom = round(ref_point[1]) + half_height
+
+            # add any length that overruns out of the top/bottom bounds onto the other side
+            bottom, top = bottom - max(top-min_width,0), top - min(bottom,0)
+
+            # constrain to be within the actual bounds
+            top = max(top, 0)
+            bottom = min(bottom, min_height)
+        else:
+            print("cropping width")
+            top, bottom = 0, min_height
+            # calculate the new height by applying the ratio on the unchanging dimension
+            output_width = math.ceil(min_height/self.ratio)
+
+            # get the left and right even if one bound is out of bounds 
+            half_width = output_width//2
+            left = round(ref_point[0]) - half_width
+            right = round(ref_point[0]) + half_width
+
+            # add any length that overruns out of the left/right bounds onto the other side
+            left, right = left - max(right-min_width,0), right - min(left,0)
+
+            # constrain to be within the actual bounds 
+            left = max(left, 0)
+            right = min(right, min_width)
+
+        print("left", left, "right", right, "top", top, "bottom", bottom)
+
+        transformed_images = [image[top:bottom, left:right] for image in transformed_images]
         self.create_gif(transformed_images)
 
     def create_gif(self, images):
